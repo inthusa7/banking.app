@@ -3,8 +3,8 @@ from datetime import datetime
 
 # Global storage for accounts and admin credentials
 accounts = {}
-login_username = "admin"
-login_password = "7777"
+login_username = ""
+login_password = ""
 next_account_number = 100001
 
 # Returns the current date in YYYY-MM-DD format
@@ -56,8 +56,7 @@ def load_accounts():
                             })
         except Exception as e:
             print("Error loading transactions:", e)
-
-# Save all account information to a file
+# Save all account data to file
 def save_all_accounts():
     try:
         with open("accounts.txt", "w") as file:
@@ -66,7 +65,7 @@ def save_all_accounts():
     except IOError as e:
         print("Failed to save account data:", e)
 
-# Log a single transaction to file
+# Log a transaction to the file
 def log_transaction(acc_no, txn_type, amount):
     try:
         with open("transactions.txt", "a") as txn:
@@ -74,15 +73,15 @@ def log_transaction(acc_no, txn_type, amount):
     except IOError as e:
         print("Failed to log transaction:", e)
 
-# Create a new customer account
+# Create a new account
 def create_account():
     global next_account_number
     name = input("Enter account holder name: ")
     address = input("Enter address: ")
     phone = input("Enter phone number: ")
     password = input("Set a password: ")
-
     initial = input("Enter initial balance: ")
+
     if not is_positive_float(initial):
         print("Invalid balance. Please enter a positive number.")
         return
@@ -108,7 +107,7 @@ def create_account():
     log_transaction(acc_no, "Created Account", balance)
     print(f"Account created successfully! Your account number is: {acc_no}")
 
-# Customer login using account number and password
+# Customer login
 def customer_login():
     acc_no = input("Enter your account number: ")
     password = input("Enter your password: ")
@@ -119,7 +118,7 @@ def customer_login():
         print("Login failed: Invalid credentials.")
         return None
 
-# Deposit money into customer account
+# Deposit money
 def deposit_money(acc_no):
     amount_input = input("Enter amount to deposit: ")
     if not is_positive_float(amount_input):
@@ -137,7 +136,7 @@ def deposit_money(acc_no):
     save_all_accounts()
     print("Deposit successful.")
 
-# Withdraw money from customer account
+# Withdraw money
 def withdraw_money(acc_no):
     amount_input = input("Enter amount to withdraw: ")
     if not is_positive_float(amount_input):
@@ -159,11 +158,11 @@ def withdraw_money(acc_no):
     save_all_accounts()
     print("Withdrawal successful.")
 
-# Check current balance
+# Check account balance
 def check_balance(acc_no):
     print(f"Your current balance is: {accounts[acc_no]['balance']}")
 
-# Display transaction history
+# Show transaction history
 def show_transaction_history(acc_no):
     print("\n--- Transaction History ---")
     print("{:<12} {:<20} {:<10}".format("Date", "Type", "Amount"))
@@ -172,48 +171,7 @@ def show_transaction_history(acc_no):
         print("{:<12} {:<20} {:<10}".format(txn['date'], txn['type'], txn['amount']))
     print("-" * 45)
 
-# Transfer money to another account
-def transfer_money(sender_acc):
-    receiver_acc = input("Enter recipient account number: ")
-    if receiver_acc not in accounts:
-        print("Recipient account not found.")
-        return
-    if receiver_acc == sender_acc:
-        print("Cannot transfer to the same account.")
-        return
-
-    amount_input = input("Enter amount to transfer: ")
-    if not is_positive_float(amount_input):
-        print("Invalid transfer amount.")
-        return
-
-    amount = float(amount_input)
-    if amount > accounts[sender_acc]['balance']:
-        print("Insufficient balance.")
-        return
-
-    # Deduct from sender
-    accounts[sender_acc]['balance'] -= amount
-    accounts[sender_acc]['transactions'].append({
-        'date': current_date(),
-        'type': f"Transfer to {receiver_acc}",
-        'amount': amount
-    })
-
-    # Add to receiver
-    accounts[receiver_acc]['balance'] += amount
-    accounts[receiver_acc]['transactions'].append({
-        'date': current_date(),
-        'type': f"Received from {sender_acc}",
-        'amount': amount
-    })
-
-    log_transaction(sender_acc, f"Transfer to {receiver_acc}", amount)
-    log_transaction(receiver_acc, f"Received from {sender_acc}", amount)
-    save_all_accounts()
-    print("Transfer successful.")
-
-# Customer main menu
+# Customer menu
 def customer_menu(acc_no):
     while True:
         print("\n--- Banking Menu ---")
@@ -221,8 +179,7 @@ def customer_menu(acc_no):
         print("2. Withdraw Money")
         print("3. Check Balance")
         print("4. Transaction History")
-        print("5. Transfer Money")
-        print("6. Logout")
+        print("5. Logout")
 
         choice = input("Enter your choice: ")
         if choice == '1':
@@ -234,30 +191,68 @@ def customer_menu(acc_no):
         elif choice == '4':
             show_transaction_history(acc_no)
         elif choice == '5':
-            transfer_money(acc_no)
-        elif choice == '6':
             print("Logged out.")
             break
         else:
             print("Invalid choice.")
 
-# Admin login check
-def admin_login():
-    print("=== Admin Login ===")
-    username = input("Enter username: ")
-    password = input("Enter password: ")
-    return username == login_username and password == login_password
+# Admin setup or login (only first time)
+def admin_setup_or_login():
+    global login_username, login_password
 
-# Start the application
+    # Skip login if already verified
+    if os.path.exists("verified.txt"):
+        return True
+
+    # First-time setup
+    if not os.path.exists("admin.txt"):
+        print("=== First Time Setup: Create Admin Account ===")
+        login_username = input("Set admin username: ")
+        login_password = input("Set admin password: ")
+        try:
+            with open("admin.txt", "w") as admin_file:
+                admin_file.write(f"{login_username}|{login_password}")
+            with open("verified.txt", "w") as vfile:
+                vfile.write("verified")
+            print("Admin account created and verified!")
+        except IOError as e:
+            print("Failed to create admin account:", e)
+            return False
+        return True
+    else:
+        # Login if setup is already there
+        try:
+            with open("admin.txt", "r") as admin_file:
+                stored = admin_file.read().strip().split("|")
+                if len(stored) == 2:
+                    login_username, login_password = stored
+        except IOError as e:
+            print("Error reading admin file:", e)
+            return False
+
+        print("=== Admin Login ===")
+        username = input("Enter username: ")
+        password = input("Enter password: ")
+        if username == login_username and password == login_password:
+            print("Admin login successful!")
+            try:
+                with open("verified.txt", "w") as vfile:
+                    vfile.write("verified")
+            except IOError:
+                print("Warning: Could not create verification file.")
+            return True
+        else:
+            print("Admin login failed.")
+            return False
+
+# Start the app
 def start_app():
     load_accounts()
     print("=== Welcome to Mini Banking App ===")
 
-    print("\n--- Admin Login Required to Start App ---")
-    if not admin_login():
-        print("Admin login failed. Exiting app.")
+    if not admin_setup_or_login():
+        print("Admin login/setup failed. Exiting app.")
         return
-    print("Admin login successful!")
 
     while True:
         print("\n1. Create New Account")
@@ -272,25 +267,13 @@ def start_app():
             if acc_no:
                 customer_menu(acc_no)
         elif choice == '3':
-            print("Thank you for using this system. Goodbye!")
+            print("Exiting app. Goodbye!")
             break
         else:
             print("Invalid option.")
 
-# Run the app
+# Run the application
 start_app()
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
