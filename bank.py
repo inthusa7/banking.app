@@ -1,58 +1,93 @@
 import os
 from datetime import datetime
 
-# Global storage for accounts and next account number
+# Global storage for accounts and admin credentials
 accounts = {}
 login_username = "admin"
 login_password = "7777"
-next_account_number = 100001  # Start account numbers from here
+next_account_number = 100001
 
-# Load existing account data from file
+# Returns the current date in YYYY-MM-DD format
+def current_date():
+    return datetime.now().strftime('%Y-%m-%d')
+
+# Checks if a given value is a positive float
+def is_positive_float(value):
+    try:
+        val = float(value)
+        return val > 0
+    except ValueError:
+        return False
+
+# Load accounts and transactions from files if they exist
 def load_accounts():
     global next_account_number
     if os.path.exists("accounts.txt"):
-        with open("accounts.txt", "r") as file:
-            for line in file:
-                acc_no, name, address, phone, password, balance = line.strip().split("|")
-                accounts[acc_no] = {
-                    'name': name,
-                    'address': address,
-                    'phone': phone,
-                    'password': password,
-                    'balance': float(balance),
-                    'transactions': []
-                }
-        next_account_number = max(int(acc) for acc in accounts.keys()) + 1
+        try:
+            with open("accounts.txt", "r") as file:
+                for line in file:
+                    acc_no, name, address, phone, password, balance = line.strip().split("|")
+                    accounts[acc_no] = {
+                        'name': name,
+                        'address': address,
+                        'phone': phone,
+                        'password': password,
+                        'balance': float(balance),
+                        'transactions': []
+                    }
+                # Update next available account number
+                next_account_number = max(int(acc) for acc in accounts.keys()) + 1
+        except Exception as e:
+            print("Error loading accounts data:", e)
 
-# Save all account data to file
+    # Load transaction history
+    if os.path.exists("transactions.txt"):
+        try:
+            with open("transactions.txt", "r") as txn_file:
+                for line in txn_file:
+                    parts = line.strip().split(" | ")
+                    if len(parts) == 4:
+                        date, acc_no, txn_type, amount = parts
+                        if acc_no in accounts:
+                            accounts[acc_no]['transactions'].append({
+                                'date': date,
+                                'type': txn_type,
+                                'amount': float(amount)
+                            })
+        except Exception as e:
+            print("Error loading transactions:", e)
+
+# Save all account information to a file
 def save_all_accounts():
-    with open("accounts.txt", "w") as file:
-        for acc_no, details in accounts.items():
-            file.write(f"{acc_no}|{details['name']}|{details['address']}|{details['phone']}|{details['password']}|{details['balance']}\n")
+    try:
+        with open("accounts.txt", "w") as file:
+            for acc_no, details in accounts.items():
+                file.write(f"{acc_no}|{details['name']}|{details['address']}|{details['phone']}|{details['password']}|{details['balance']}\n")
+    except IOError as e:
+        print("Failed to save account data:", e)
 
-# Save each transaction to file
+# Log a single transaction to file
 def log_transaction(acc_no, txn_type, amount):
-    date_str = datetime.now().strftime('%Y-%m-%d')
-    with open("transactions.txt", "a") as txn:
-        txn.write(f"{date_str} | {acc_no} | {txn_type} | {amount}\n")
+    try:
+        with open("transactions.txt", "a") as txn:
+            txn.write(f"{current_date()} | {acc_no} | {txn_type} | {amount}\n")
+    except IOError as e:
+        print("Failed to log transaction:", e)
 
-# Admin creates a new account
+# Create a new customer account
 def create_account():
     global next_account_number
     name = input("Enter account holder name: ")
     address = input("Enter address: ")
     phone = input("Enter phone number: ")
-    password = input("Set a password (not used for login): ")
+    password = input("Set a password: ")
 
-    try:
-        balance = float(input("Enter initial balance: "))
-        if balance < 0:
-            print("Error: Balance cannot be negative.")
-            return
-    except ValueError:
-        print("Invalid balance.")
+    initial = input("Enter initial balance: ")
+    if not is_positive_float(initial):
+        print("Invalid balance. Please enter a positive number.")
         return
 
+    balance = float(initial)
     acc_no = str(next_account_number)
     next_account_number += 1
 
@@ -63,7 +98,7 @@ def create_account():
         'password': password,
         'balance': balance,
         'transactions': [{
-            'date': datetime.now().strftime('%Y-%m-%d'),
+            'date': current_date(),
             'type': "Created Account",
             'amount': balance
         }]
@@ -73,94 +108,94 @@ def create_account():
     log_transaction(acc_no, "Created Account", balance)
     print(f"Account created successfully! Your account number is: {acc_no}")
 
-# Customer login using name and address
+# Customer login using account number and password
 def customer_login():
-    name = input("Enter your name: ")
-    address = input("Enter your address: ")
-    for acc_no, info in accounts.items():
-        if info['name'] == name and info['address'] == address:
-            print(f"\nWelcome, {info['name']}!")
-            return acc_no
-    print("Login failed: No matching account found.")
-    return None
+    acc_no = input("Enter your account number: ")
+    password = input("Enter your password: ")
+    if acc_no in accounts and accounts[acc_no]['password'] == password:
+        print(f"\nWelcome, {accounts[acc_no]['name']}!")
+        return acc_no
+    else:
+        print("Login failed: Invalid credentials.")
+        return None
 
-# Deposit money
+# Deposit money into customer account
 def deposit_money(acc_no):
-    try:
-        amount = float(input("Enter amount to deposit: "))
-        if amount <= 0:
-            print("Must deposit positive amount.")
-            return
-        accounts[acc_no]['balance'] += amount
-        accounts[acc_no]['transactions'].append({
-            'date': datetime.now().strftime('%Y-%m-%d'),
-            'type': "Deposit",
-            'amount': amount
-        })
-        log_transaction(acc_no, "Deposit", amount)
-        save_all_accounts()
-        print("Deposit successful.")
-    except ValueError:
-        print("Invalid amount.")
+    amount_input = input("Enter amount to deposit: ")
+    if not is_positive_float(amount_input):
+        print("Amount must be a positive number.")
+        return
 
-# Withdraw money
+    amount = float(amount_input)
+    accounts[acc_no]['balance'] += amount
+    accounts[acc_no]['transactions'].append({
+        'date': current_date(),
+        'type': "Deposit",
+        'amount': amount
+    })
+    log_transaction(acc_no, "Deposit", amount)
+    save_all_accounts()
+    print("Deposit successful.")
+
+# Withdraw money from customer account
 def withdraw_money(acc_no):
-    try:
-        amount = float(input("Enter amount to withdraw: "))
-        if amount <= 0 or amount > accounts[acc_no]['balance']:
-            print("Invalid withdrawal amount.")
-            return
-        accounts[acc_no]['balance'] -= amount
-        accounts[acc_no]['transactions'].append({
-            'date': datetime.now().strftime('%Y-%m-%d'),
-            'type': "Withdrawal",
-            'amount': amount
-        })
-        log_transaction(acc_no, "Withdrawal", amount)
-        save_all_accounts()
-        print("Withdrawal successful.")
-    except ValueError:
-        print("Invalid amount.")
+    amount_input = input("Enter amount to withdraw: ")
+    if not is_positive_float(amount_input):
+        print("Amount must be a positive number.")
+        return
 
-# Check balance
+    amount = float(amount_input)
+    if amount > accounts[acc_no]['balance']:
+        print("Insufficient funds.")
+        return
+
+    accounts[acc_no]['balance'] -= amount
+    accounts[acc_no]['transactions'].append({
+        'date': current_date(),
+        'type': "Withdrawal",
+        'amount': amount
+    })
+    log_transaction(acc_no, "Withdrawal", amount)
+    save_all_accounts()
+    print("Withdrawal successful.")
+
+# Check current balance
 def check_balance(acc_no):
     print(f"Your current balance is: {accounts[acc_no]['balance']}")
 
-# Show transaction history
+# Display transaction history
 def show_transaction_history(acc_no):
     print("\n--- Transaction History ---")
-    print("{:<12} {:<15} {:<10}".format("Date", "Type", "Amount"))
-    print("-" * 40)
+    print("{:<12} {:<20} {:<10}".format("Date", "Type", "Amount"))
+    print("-" * 45)
     for txn in accounts[acc_no]['transactions']:
-        print("{:<12} {:<15} {:<10}".format(txn['date'], txn['type'], txn['amount']))
-    print("-" * 40)
+        print("{:<12} {:<20} {:<10}".format(txn['date'], txn['type'], txn['amount']))
+    print("-" * 45)
 
-# Transfer money between accounts
+# Transfer money to another account
 def transfer_money(sender_acc):
     receiver_acc = input("Enter recipient account number: ")
     if receiver_acc not in accounts:
         print("Recipient account not found.")
         return
     if receiver_acc == sender_acc:
-        print("You cannot transfer to the same account.")
+        print("Cannot transfer to the same account.")
         return
 
-    try:
-        amount = float(input("Enter amount to transfer: "))
-        if amount <= 0:
-            print("Amount must be positive.")
-            return
-        if amount > accounts[sender_acc]['balance']:
-            print("Insufficient balance.")
-            return
-    except ValueError:
-        print("Invalid amount.")
+    amount_input = input("Enter amount to transfer: ")
+    if not is_positive_float(amount_input):
+        print("Invalid transfer amount.")
+        return
+
+    amount = float(amount_input)
+    if amount > accounts[sender_acc]['balance']:
+        print("Insufficient balance.")
         return
 
     # Deduct from sender
     accounts[sender_acc]['balance'] -= amount
     accounts[sender_acc]['transactions'].append({
-        'date': datetime.now().strftime('%Y-%m-%d'),
+        'date': current_date(),
         'type': f"Transfer to {receiver_acc}",
         'amount': amount
     })
@@ -168,18 +203,17 @@ def transfer_money(sender_acc):
     # Add to receiver
     accounts[receiver_acc]['balance'] += amount
     accounts[receiver_acc]['transactions'].append({
-        'date': datetime.now().strftime('%Y-%m-%d'),
+        'date': current_date(),
         'type': f"Received from {sender_acc}",
         'amount': amount
     })
 
-    # Log both
     log_transaction(sender_acc, f"Transfer to {receiver_acc}", amount)
     log_transaction(receiver_acc, f"Received from {sender_acc}", amount)
     save_all_accounts()
     print("Transfer successful.")
 
-# Customer menu
+# Customer main menu
 def customer_menu(acc_no):
     while True:
         print("\n--- Banking Menu ---")
@@ -207,7 +241,7 @@ def customer_menu(acc_no):
         else:
             print("Invalid choice.")
 
-# Admin login
+# Admin login check
 def admin_login():
     print("=== Admin Login ===")
     username = input("Enter username: ")
@@ -227,7 +261,7 @@ def start_app():
 
     while True:
         print("\n1. Create New Account")
-        print("2. Login as Customer (by Name & Address)")
+        print("2. Login as Customer")
         print("3. Exit")
         choice = input("Choose an option: ")
 
@@ -238,7 +272,7 @@ def start_app():
             if acc_no:
                 customer_menu(acc_no)
         elif choice == '3':
-            print("thank you for using this app. Goodbye!")
+            print("Thank you for using this system. Goodbye!")
             break
         else:
             print("Invalid option.")
