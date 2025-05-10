@@ -1,17 +1,17 @@
-import os
-from datetime import datetime
+import os   # For the file existence check
+from datetime import datetime  # For handling current date/time
 
 # Global storage for accounts and admin credentials
-accounts = {}
-login_username = ""
-login_password = ""
-next_account_number = 100001
+accounts = {}     #Dictionary to store account details
+login_username = ""  #admin username
+login_password = ""   #admin userpassword
+next_account_number = 100001 #Starting point of new account numbers
 
-# Returns the current date in YYYY-MM-DD format
+# Function to returns the current date in YYYY-MM-DD format
 def current_date():
     return datetime.now().strftime('%Y-%m-%d')
 
-# Checks if a given value is a positive float
+# Function to Checks if a given value is a positive float
 def is_positive_float(value):
     try:
         val = float(value)
@@ -19,9 +19,10 @@ def is_positive_float(value):
     except ValueError:
         return False
 
-# Load accounts and transactions from files if they exist
+# Load existing accounts and transactions data from files 
 def load_accounts():
-    global next_account_number
+    global next_account_number 
+    # Check and load account data 
     if os.path.exists("accounts.txt"):
         try:
             with open("accounts.txt", "r") as file:
@@ -33,9 +34,9 @@ def load_accounts():
                         'phone': phone,
                         'password': password,
                         'balance': float(balance),
-                        'transactions': []
+                        'transactions': []  #Emty list to store transaction
                     }
-                # Update next available account number
+                # Set next account number to be higher than the highest existing one
                 next_account_number = max(int(acc) for acc in accounts.keys()) + 1
         except Exception as e:
             print("Error loading accounts data:", e)
@@ -56,7 +57,8 @@ def load_accounts():
                             })
         except Exception as e:
             print("Error loading transactions:", e)
-# Save all account data to file
+
+# Save all account information back to the  file
 def save_all_accounts():
     try:
         with open("accounts.txt", "w") as file:
@@ -65,7 +67,7 @@ def save_all_accounts():
     except IOError as e:
         print("Failed to save account data:", e)
 
-# Log a transaction to the file
+# Append a single transaction to the transaction log file
 def log_transaction(acc_no, txn_type, amount):
     try:
         with open("transactions.txt", "a") as txn:
@@ -73,7 +75,7 @@ def log_transaction(acc_no, txn_type, amount):
     except IOError as e:
         print("Failed to log transaction:", e)
 
-# Create a new account
+# Create a new account with user input
 def create_account():
     global next_account_number
     name = input("Enter account holder name: ")
@@ -88,8 +90,9 @@ def create_account():
 
     balance = float(initial)
     acc_no = str(next_account_number)
-    next_account_number += 1
+    next_account_number += 1  #Update for next account 
 
+    #Store account info in dictionary
     accounts[acc_no] = {
         'name': name,
         'address': address,
@@ -102,12 +105,13 @@ def create_account():
             'amount': balance
         }]
     }
-
+    
+    #Save to file and log creation
     save_all_accounts()
     log_transaction(acc_no, "Created Account", balance)
     print(f"Account created successfully! Your account number is: {acc_no}")
 
-# Customer login
+#login using account number and password
 def customer_login():
     acc_no = input("Enter your account number: ")
     password = input("Enter your password: ")
@@ -118,7 +122,7 @@ def customer_login():
         print("Login failed: Invalid credentials.")
         return None
 
-# Deposit money
+# Add money to an account
 def deposit_money(acc_no):
     amount_input = input("Enter amount to deposit: ")
     if not is_positive_float(amount_input):
@@ -136,7 +140,7 @@ def deposit_money(acc_no):
     save_all_accounts()
     print("Deposit successful.")
 
-# Withdraw money
+# Withdraw money if balance allows
 def withdraw_money(acc_no):
     amount_input = input("Enter amount to withdraw: ")
     if not is_positive_float(amount_input):
@@ -158,11 +162,11 @@ def withdraw_money(acc_no):
     save_all_accounts()
     print("Withdrawal successful.")
 
-# Check account balance
+# Display current balance
 def check_balance(acc_no):
     print(f"Your current balance is: {accounts[acc_no]['balance']}")
 
-# Show transaction history
+# Show list of transaction 
 def show_transaction_history(acc_no):
     print("\n--- Transaction History ---")
     print("{:<12} {:<20} {:<10}".format("Date", "Type", "Amount"))
@@ -171,7 +175,9 @@ def show_transaction_history(acc_no):
         print("{:<12} {:<20} {:<10}".format(txn['date'], txn['type'], txn['amount']))
     print("-" * 45)
 
-# Customer menu
+
+
+# Display option for the logged-in customer
 def customer_menu(acc_no):
     while True:
         print("\n--- Banking Menu ---")
@@ -201,7 +207,7 @@ def admin_setup_or_login():
     global login_username, login_password
 
     # Skip login if already verified
-    if os.path.exists("verified.txt"):
+    if os.path.exists("admin.txt"):
         return True
 
     # First-time setup
@@ -211,9 +217,9 @@ def admin_setup_or_login():
         login_password = input("Set admin password: ")
         try:
             with open("admin.txt", "w") as admin_file:
-                admin_file.write(f"{login_username}|{login_password}")
-            with open("verified.txt", "w") as vfile:
-                vfile.write("verified")
+                admin_file.write(f"{login_username}|{login_password}\n")
+            with open("admin.txt", "a") as adminfile:
+                adminfile.write("verified")
             print("Admin account created and verified!")
         except IOError as e:
             print("Failed to create admin account:", e)
@@ -236,8 +242,8 @@ def admin_setup_or_login():
         if username == login_username and password == login_password:
             print("Admin login successful!")
             try:
-                with open("verified.txt", "w") as vfile:
-                    vfile.write("verified")
+                with open("admin.txt", "a") as adminfile:
+                    adminfile.write("verified")
             except IOError:
                 print("Warning: Could not create verification file.")
             return True
@@ -294,7 +300,33 @@ start_app()
 
 
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
             
             
 
