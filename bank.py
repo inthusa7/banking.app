@@ -1,11 +1,11 @@
-import os
-from datetime import datetime
+import os # For the file existence check
+from datetime import datetime # For handling current date/time
 
-# Global storage for accounts and admin credentials
-accounts = {}
-login_username = ""
-login_password = ""
-next_account_number = 100001
+
+# Global storage for accounts
+accounts = {} #Dictionary to store account details
+next_account_number = 100001 #Starting point of new account numbers
+
 
 # Returns the current date in YYYY-MM-DD format
 def current_date():
@@ -56,6 +56,7 @@ def load_accounts():
                             })
         except Exception as e:
             print("Error loading transactions:", e)
+
 # Save all account data to file
 def save_all_accounts():
     try:
@@ -196,63 +197,10 @@ def customer_menu(acc_no):
         else:
             print("Invalid choice.")
 
-# Admin setup or login (only first time)
-def admin_setup_or_login():
-    global login_username, login_password
-
-    # Skip login if already verified
-    if os.path.exists("verified.txt"):
-        return True
-
-    # First-time setup
-    if not os.path.exists("admin.txt"):
-        print("=== First Time Setup: Create Admin Account ===")
-        login_username = input("Set admin username: ")
-        login_password = input("Set admin password: ")
-        try:
-            with open("admin.txt", "w") as admin_file:
-                admin_file.write(f"{login_username}|{login_password}")
-            with open("verified.txt", "w") as vfile:
-                vfile.write("verified")
-            print("Admin account created and verified!")
-        except IOError as e:
-            print("Failed to create admin account:", e)
-            return False
-        return True
-    else:
-        # Login if setup is already there
-        try:
-            with open("admin.txt", "r") as admin_file:
-                stored = admin_file.read().strip().split("|")
-                if len(stored) == 2:
-                    login_username, login_password = stored
-        except IOError as e:
-            print("Error reading admin file:", e)
-            return False
-
-        print("=== Admin Login ===")
-        username = input("Enter username: ")
-        password = input("Enter password: ")
-        if username == login_username and password == login_password:
-            print("Admin login successful!")
-            try:
-                with open("verified.txt", "w") as vfile:
-                    vfile.write("verified")
-            except IOError:
-                print("Warning: Could not create verification file.")
-            return True
-        else:
-            print("Admin login failed.")
-            return False
-
 # Start the app
 def start_app():
     load_accounts()
     print("=== Welcome to Mini Banking App ===")
-
-    if not admin_setup_or_login():
-        print("Admin login/setup failed. Exiting app.")
-        return
 
     while True:
         print("\n1. Create New Account")
@@ -267,34 +215,10 @@ def start_app():
             if acc_no:
                 customer_menu(acc_no)
         elif choice == '3':
-            print("Exiting app. Goodbye!")
+            print("Thank you for using this app. Goodbye!")
             break
         else:
             print("Invalid option.")
 
 # Run the application
 start_app()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
-            
-            
-
